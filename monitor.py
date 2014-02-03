@@ -13,7 +13,8 @@ reload(sys)
 sys.setdefaultencoding('utf-8')
 
 monitorList = ['Object number', 'Deleted', 'Object count', 'Object name', 'Collection manager',
-               'Accession status', 'EFC', 'Object type', 'Field collection place', 'Associated culture']
+               'Accession status', 'Ethnographic file code', 'Object type', 'Field collection place', 'Associated culture',
+               'Current location', 'Current crate']
 
 r = re.compile(u"^.*\)'(.*)'$", re.UNICODE)
 
@@ -37,11 +38,12 @@ def main():
     """
     monitorDict = defaultdict(lambda: defaultdict(unicode))
     start = datetime.datetime.now()
-    msg = u'Change report:\n\nDate: %s\n' % (str(start.strftime('%Y-%m-%d %H:%M:%S')))
+    msg = u'Report of changes made to CSpace:\n\nDate: %s\n' % (str(start.strftime('%Y-%m-%d %H:%M:%S')))
     try:
         for monitor in monitorList:
-            msg += '\nMonitoring \'%s\'\n\nThe following changes were made since last run:\n\n' % (monitor)
-            fn = monitor + '.txt'
+            msg += '\n====================Monitoring \'%s\'====================\n\nThe following changes were made since last run:\n\n' % (m
+onitor)
+            fn = 'change_monitor/datafiles/' + monitor + '.txt'
             try:
                 with(open(fn, 'r')) as f:
                     reader = csv.reader(f, delimiter=',', quotechar='\x36')
@@ -62,7 +64,8 @@ def main():
                                 if True: #replace with appropriate function when written
                                     msg += '%s  %s changed to %s\n' % (getObjNo(key).ljust(10), monitorDict[monitor][key].ljust(5),
                                                                        value)
-                            elif monitor in ['EFC', 'Field collection place', 'Associated culture']:
+                            elif monitor in ['Ethnographic file code', 'Field collection place', 'Associated culture', 'Current location',
+                                             'Current crate']:
                                 try:
                                     msg += u'%s %s changed to %s\n' % (getObjNo(key).ljust(10),
                                                                           r.search(monitorDict[monitor][key]).group(1).ljust(30),
@@ -130,14 +133,16 @@ def getQuery(monitor):
                  JOIN collectionobjects_common_responsibledepartments cm ON (co.id = cm.id AND cm.pos=0)''',
                  'Accession status': '''SELECT co.id, osl.item FROM collectionobjects_common co
                  JOIN collectionobjects_pahma_pahmaobjectstatuslist osl ON (co.id = osl.id AND osl.pos=0)''',
-                 'EFC': '''SELECT co.id, efc.item FROM collectionobjects_common co
+                 'Ethnographic file code': '''SELECT co.id, efc.item FROM collectionobjects_common co
                  JOIN collectionobjects_pahma_pahmaethnographicfilecodelist efc ON (co.id = efc.id AND efc.pos=0)''',
                  'Object type': 'SELECT co.id, co.collection FROM collectionobjects_common co',
                  'Field collection place': '''SELECT co.id, fcp.item FROM collectionobjects_common co
                  JOIN collectionobjects_pahma_pahmafieldcollectionplacelist fcp ON (co.id = fcp.id AND fcp.pos=0)''',
                  'Associated culture': '''SELECT co.id, apg.assocpeople FROM collectionobjects_common co
                  JOIN hierarchy h ON (co.id = h.parentid AND h.name='collectionobjects_common:assocPeopleGroupList' AND h.pos=0)
-                 JOIN assocpeoplegroup apg ON (h.id = apg.id)'''}
+                 JOIN assocpeoplegroup apg ON (h.id = apg.id)''',
+                 'Current location': 'SELECT id, computedcurrentlocation FROM collectionobjects_common',
+                 'Current crate': 'SELECT id, computedcrate FROM collectionobjects_anthropology'}
 
     return queryDict.setdefault(monitor, '')
 
@@ -160,7 +165,7 @@ def writeMsg(msg):
     """Prints MSG and saves it to a file as a backup."""
     print msg
 
-    fn = 'Cspace Change Monitor %s.txt' % (datetime.datetime.now().strftime('%Y-%m-%d'))
+    fn = 'change_monitor/results/CSpace changes %s.txt' % (datetime.datetime.now().strftime('%Y-%m-%d'))
     try:
         with(open(fn, 'w')) as f:
             f.write(msg)
